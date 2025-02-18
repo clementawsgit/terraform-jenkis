@@ -8,23 +8,47 @@ pipeline {
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
 
-    agent any
+   agent  any
     stages {
-        stage('Checkout') {
+        stage('checkout') {
             steps {
-                git branch: 'master', credentialsId: '<CREDS>', url: 'https://github.com/clementawsgit/terraform-jenkis.git'
+                 script{
+                        dir("terraform")
+                        {
+                            git "https://github.com/clementawsgit/terraform-jenkis.git"
+                        }
+                    }
+                }
+            }
+
+        stage('Plan') {
+            steps {
+                sh 'pwd;cd terraform/ ; terraform init'
+                sh "pwd;cd terraform/ ; terraform plan -out tfplan"
+                sh 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
             }
         }
-        stage('Terraform init') {
+        stage('Approval') {
+           when {
+               not {
+                   equals expected: true, actual: params.autoApprove
+               }
+           }
+
+           steps {
+               script {
+                    def plan = readFile 'terraform/tfplan.txt'
+                    input message: "Do you want to apply the plan?",
+                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+               }
+           }
+       }
+
+        stage('Apply') {
             steps {
-                sh 'terraform init'
+                sh "pwd;cd terraform/ ; terraform apply -input=false tfplan"
             }
         }
-        stage('Terraform apply') {
-            steps {
-                sh 'terraform apply --auto-approve'
-            }
-        }
-        
     }
-}
+
+  }
