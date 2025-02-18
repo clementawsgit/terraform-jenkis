@@ -1,10 +1,22 @@
 pipeline {
-    agent { docker { image 'python:3.13.2-alpine3.21' } }
+    agent any
+
     stages {
-        stage('build') {
+        stage('Checkout') {
             steps {
-                sh 'python --version'
+                git branch: 'master', credentialsId: '<CREDS>', url: 'https://github.com/clementawsgit/terraform-jenkis.git'
             }
         }
+        stage('Terraform init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Terraform apply') {
+            steps {
+                sh 'terraform apply --auto-approve'
+            }
+        }
+        
     }
 }
