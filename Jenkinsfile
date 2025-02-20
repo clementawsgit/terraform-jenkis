@@ -1,60 +1,54 @@
 pipeline {
-    agent any
-    
+
+    parameters {
+        booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
+    } 
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AKIAWCZC5ZCVWFTGYAOM')  
-        AWS_SECRET_ACCESS_KEY = credentials('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')  
-        AWS_DEFAULT_REGION = 'us-east-1'  
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
 
+   agent  any
     stages {
-        stage('Checkout') {
+        stage('checkout') {
             steps {
-                // Checkout the Terraform configuration from your Git repository
-                git 'https://github.com/clementawsgit/terraform-jenkis.git' 
-            }
-        }
-
-        stage('Initialize Terraform') {
-            steps {
-                script {
-                    // Initialize the Terraform working directory
-                    sh 'terraform init'
+                 script{
+                        dir("terraform")
+                        {
+                            git "https://github.com/yeshwanthlm/Terraform-Jenkins.git"
+                        }
+                    }
                 }
             }
-        }
 
-        stage('Plan Terraform') {
+        stage('Plan') {
             steps {
-                script {
-                    // Run Terraform plan to show execution plan
-                    sh 'terraform plan -out=tfplan'
-                }
+                sh 'pwd;cd terraform/ ; terraform init'
+                sh "pwd;cd terraform/ ; terraform plan -out tfplan"
+                sh 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
             }
         }
+        stage('Approval') {
+           when {
+               not {
+                   equals expected: true, actual: params.autoApprove
+               }
+           }
 
-        stage('Apply Terraform') {
+           steps {
+               script {
+                    def plan = readFile 'terraform/tfplan.txt'
+                    input message: "Do you want to apply the plan?",
+                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+               }
+           }
+       }
+
+        stage('Apply') {
             steps {
-                script {
-                    // Apply the Terraform plan to create the EC2 instance
-                    sh 'terraform apply -auto-approve tfplan'
-                }
+                sh "pwd;cd terraform/ ; terraform apply -input=false tfplan"
             }
         }
     }
 
-    post {
-        always {
-            // Clean up the workspace after execution
-            cleanWs()
-        }
-        success {
-            // Notify on successful EC2 creation
-            echo 'EC2 instance created successfully!'
-        }
-        failure {
-            // Handle failure
-            echo 'Terraform execution failed.'
-        }
-    }
-}
+  }
