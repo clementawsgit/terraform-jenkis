@@ -2,23 +2,23 @@ pipeline {
     agent any
     
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_ACCESS_KEY_ID = credentials('AKIAWCZC5ZCVWFTGYAOM')  // Replace with your AWS credentials ID in Jenkins
+        AWS_SECRET_ACCESS_KEY = credentials('4dLyxnSX9GSblxKdLbPEg7SLMYn9MnCaU4RCzy24')  // Replace with your AWS credentials ID in Jenkins
+        AWS_DEFAULT_REGION = 'us-east-1'  // The AWS region to use
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                
-                git 'https://github.com/clementawsgit/terraform-jenkis.git'  
+                // Checkout the Terraform configuration from your Git repository
+                git 'https://github.com/clementawsgit/terraform-jenkis.git' 
             }
         }
 
         stage('Initialize Terraform') {
             steps {
                 script {
-                    
+                    // Initialize the Terraform working directory
                     sh 'terraform init'
                 }
             }
@@ -27,7 +27,7 @@ pipeline {
         stage('Plan Terraform') {
             steps {
                 script {
-                    
+                    // Run Terraform plan to show execution plan
                     sh 'terraform plan -out=tfplan'
                 }
             }
@@ -36,17 +36,8 @@ pipeline {
         stage('Apply Terraform') {
             steps {
                 script {
-                    
+                    // Apply the Terraform plan to create the EC2 instance
                     sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
-
-        stage('Clean Up') {
-            steps {
-                script {
-                    
-                    
                 }
             }
         }
@@ -54,15 +45,15 @@ pipeline {
 
     post {
         always {
-            
+            // Clean up the workspace after execution
             cleanWs()
         }
         success {
-            
+            // Notify on successful EC2 creation
             echo 'EC2 instance created successfully!'
         }
         failure {
-            
+            // Handle failure
             echo 'Terraform execution failed.'
         }
     }
